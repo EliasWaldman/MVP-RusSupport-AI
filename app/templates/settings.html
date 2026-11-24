@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Настройки — RusSupport AI{% endblock %}
+{% block page_title %}Настройки{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <h1>Настройки</h1>
+    <p class="page-sub">Личный кабинет и параметры системы</p>
+</div>
+
+<div class="settings-container">
+    <!-- Профиль пользователя -->
+    <section class="settings-card" aria-label="Профиль пользователя">
+        <div class="section-head">
+            <h2>Профиль пользователя</h2>
+        </div>
+
+        <div class="profile-card">
+            <div class="profile-card__avatar">АД</div>
+            <div class="profile-card__info">
+                <span class="profile-card__name">Admin</span>
+                <span class="profile-card__role">Administrator (Support Department)</span>
+                <span class="profile-card__email">admin@russupport.ai</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Параметры системы -->
+    <section class="settings-card" aria-label="Параметры системы">
+        <div class="section-head">
+            <h2>Параметры системы</h2>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-row__text">
+                <span class="settings-row__label">Тема интерфейса</span>
+                <span class="settings-row__hint">Светлая / Тёмная</span>
+            </div>
+            <label class="settings-theme" aria-label="Переключатель темы">
+                <span id="theme-label" class="settings-theme__label">Тёмная</span>
+                <input type="checkbox" id="settings-theme-toggle" class="settings-theme__input" checked>
+                <span class="toggle-switch" aria-hidden="true"></span>
+            </label>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-row__text">
+                <span class="settings-row__label">Уведомления в Telegram</span>
+                <span class="settings-row__hint">Отправка уведомлений в чат</span>
+            </div>
+            <label class="settings-theme" aria-label="Уведомления в Telegram">
+                <input type="checkbox" class="settings-theme__input" data-telegram-toggle>
+                <span class="toggle-switch" aria-hidden="true"></span>
+            </label>
+        </div>
+
+        <div class="settings-row">
+            <div class="settings-row__text">
+                <span class="settings-row__label">Автоматическая сводка в 10:00</span>
+                <span class="settings-row__hint">Ежедневный отчёт по кейсам</span>
+            </div>
+            <label class="settings-theme" aria-label="Автоматическая сводка">
+                <input type="checkbox" class="settings-theme__input" checked data-summary-toggle>
+                <span class="toggle-switch" aria-hidden="true"></span>
+            </label>
+        </div>
+    </section>
+</div>
+
+<div class="settings-actions">
+    <button class="btn btn--ghost btn--danger" type="button" onclick="alert('Выход...')">Выйти</button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var root = document.documentElement;
+    var themeToggle = document.getElementById('settings-theme-toggle');
+    var themeLabel = document.getElementById('theme-label');
+
+    function sync() {
+        var isDark = root.getAttribute('data-theme') !== 'light';
+        if (themeToggle) themeToggle.checked = isDark;
+        if (themeLabel) themeLabel.textContent = isDark ? 'Тёмная' : 'Светлая';
+    }
+
+    sync();
+    document.addEventListener('DOMContentLoaded', sync);
+
+    if (themeToggle) {
+        themeToggle.addEventListener('change', function () {
+            var theme = themeToggle.checked ? 'dark' : 'light';
+            root.setAttribute('data-theme', theme);
+            try { localStorage.setItem('rs-theme', theme); } catch (e) { /* приватный режим */ }
+            if (themeLabel) themeLabel.textContent = themeToggle.checked ? 'Тёмная' : 'Светлая';
+        });
+    }
+
+    // О_sync с переключателем в топбаре, если он есть на странице
+    var topbarToggle = document.querySelector('[data-theme-toggle]');
+    if (topbarToggle) {
+        topbarToggle.addEventListener('click', function () {
+            setTimeout(sync, 0);
+        });
+    }
+})();
+</script>
+{% endblock %}

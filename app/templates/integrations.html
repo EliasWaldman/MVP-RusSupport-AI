@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+{% block title %}Интеграции — RusSupport AI{% endblock %}
+{% block page_title %}Интеграции{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <h1>Интеграции</h1>
+    <p class="page-sub">Подключенные источники данных и сервисы</p>
+</div>
+
+<div class="integrations-grid">
+    {% for integration in integrations %}
+    {% set connected = integration.status == 'active' or integration.key in integrations_data %}
+    {% set info = integrations_data.get(integration.key) or {} %}
+    {% set masked_key = info.get('masked_key', '') if info else '' %}
+    {% set has_masked_key = masked_key|string|trim|length > 0 %}
+
+    {# Google Sheets — отдельное поле: ID таблицы из .env, а не API-ключ #}
+    {% set is_sheets = integration.key == 'google' %}
+    {% set spreadsheet_id = google_spreadsheet_id|default('', true)|string|trim %}
+    {% set has_sheets_id = is_sheets and spreadsheet_id|length > 0 %}
+    {% set show_value_view = (is_sheets and has_sheets_id) or (not is_sheets and connected and has_masked_key) %}
+    {% set show_form = is_sheets or not (connected and not has_masked_key) %}
+    {% set displayed_value = google_spreadsheet_id_masked|default('', true) if is_sheets else masked_key %}
+    {% set edit_value = spreadsheet_id if is_sheets else (masked_placeholder if connected else '') %}
+    {% set form_action = '/integrations/google_sheets/save' if is_sheets else '/integrations/' ~ integration.key ~ '/save' %}
+    {% set input_name = 'spreadsheet_id' if is_sheets else 'api_key' %}
+    <article
+        class="integration-card{% if not connected %} is-open{% endif %}"
+        id="{{ integration.key }}"
+        data-service="{{ integration.key }}"
+        data-connected="{{ 'true' if connected else 'false' }}"
+    >
+        <div class="integration-icon">{{ integration.icon }}</div>
+
+        <div class="integration-body">
+            <span class="integration-name">{{ integration.name }}</span>
+            <span class="integration-desc">{{ integration.description }}</span>
+            <span class="integration-category">{{ integration.category }}</span>
+        </div>
+
+        {# Сохранённое значение показываем маской; кнопка «Изменить» открывает форму #}
+        {% if show_value_view %}
+        <div class="integration-key" data-key-view{% if is_sheets %} data-field="spreadsheet_id"{% endif %}>
+            <code class="integration-key__value" data-masked-key>{{ displayed_value }}</code>
+            <button class="btn btn--ghost btn--edit" type="button" data-edit-key>Изменить</button>
+        </div>
+        {% endif %}
+
+        {# Форма Google Sheets всегда присутствует: без ID — сразу видна,
+           с ID — скрыта до нажатия «Изменить». #}
+        {% if show_form %}
+        <div class="integration-form" data-field="{{ input_name }}">
+            <form
+                class="integration-form__inner"
+                data-save-form
+                method="post"
+                action="{{ form_action }}"
+            >
+                <label class="field">
+                    <span class="field-label">
+                        {% if is_sheets %}ID таблицы (Spreadsheet ID){% elif integration.key == 'openrouter' %}OpenRouter API Key{% elif integration.key == 'gigachat' %}GigaChat Credentials{% else %}API ключ{% endif %}
+                    </span>
+                    <input
+                        class="field-input"
+                        type="text"
+                        name="{{ input_name }}"
+                        data-edit-value="{{ edit_value }}"
+                        value="{{ edit_value }}"
+                        autocomplete="off"
+                        spellcheck="false"
+                        placeholder="{{ 'Вставьте ID таблицы…' if is_sheets else 'Вставьте ключ…' }}"
+                        {% if connected %}disabled{% endif %}
+                        required>
+                </label>
+
+                <div class="integration-form__actions">
+                    <button class="btn btn--primary" type="submit">Сохранить</button>
+                    {% if connected %}
+                    <button class="btn btn--ghost" type="button" data-cancel>Отмена</button>
+                    {% endif %}
+                </div>
+
+                <p class="integration-form__hint" data-hint>
+                    {% if is_sheets %}
+                    ID берется из ссылки на таблицу. Ключ доступа (credentials.json) хранится в файле data/google_credentials.json.
+                    {% elif connected and info.source == 'env' %}
+                    Ключ задан в .env. Новый ключ будет сохранён в <code>data/integrations.json</code>.
+                    {% else %}
+                    Ключ сохраняется локально в <code>data/integrations.json</code>.
+                    {% endif %}
+                </p>
+            </form>
+        </div>
+        {% endif %}
+
+        <div class="integration-foot">
+            <span class="chip chip--status integration-status {{ 'is-active' if connected else 'is-inactive' }}" data-status-chip>
+                {{ integration.status_label }}
+            </span>
+        </div>
+    </article>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Стили страницы интеграций — только токены дизайн-системы */
+
+.integrations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.integration-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  transition: border-color .32s var(--ease), transform .32s var(--ease);
+}
+.integration-card:hover { border-color: var(--border-strong); }
+.integration-card.is-editing {
+  border-color: var(--border-strong);
+  transform: none;
+}
+
+.integration-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 18px;
+  color: var(--fg);
+}
+.integration-card.is-editing .integration-icon {
+  background: var(--invert-bg);
+  color: var(--invert-fg);
+  border-color: var(--invert-bg);
+}
+
+.integration-body { display: flex; flex-direction: column; gap: 4px; }
+.integration-name {
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  color: var(--fg);
+}
+.integration-desc { font-size: 13px; line-height: 1.5; color: var(--fg-2); }
+.integration-category {
+  margin-top: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+.integration-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+/* ---------- Форма (скрыта у активных, видна у неактивных) ---------- */
+
+.integration-form {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height .38s var(--ease), opacity .28s var(--ease), margin .38s var(--ease);
+  margin: 0;
+}
+.integration-card.is-open .integration-form {
+  max-height: 360px;
+  opacity: 1;
+  margin: 4px 0 2px;
+}
+
+.integration-form__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elev);
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+
+.field-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+.field-input {
+  width: 100%;
+  padding: 10px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  transition: border-color .28s var(--ease), background .28s var(--ease);
+}
+.field-input::placeholder { color: var(--fg-3); }
+.field-input:hover { border-color: var(--border-strong); }
+.field-input:focus {
+  border-color: var(--fg);
+  background: var(--bg-elev);
+}
+
+.integration-form__actions { display: flex; gap: 8px; }
+.integration-form__actions .btn { flex: 1 1 auto; }
+
+.btn--primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 16px;
+  background: var(--invert-bg);
+  color: var(--invert-fg);
+  border: 1px solid var(--invert-bg);
+  border-radius: 999px;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .28s var(--ease), transform .28s var(--ease);
+}
+.btn--primary:hover { opacity: .82; }
+.btn--primary:active { transform: scale(.98); }
+.btn--primary[disabled] { opacity: .45; cursor: default; }
+
+.integration-form__hint {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--fg-3);
+}
+.integration-form__hint code {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--fg-2);
+}
+.integration-form__hint.is-error { color: var(--fg); font-weight: 500; }
+
+/* Mobile: карточки в одну колонку */
+@media (max-width: 640px) {
+  .integrations-grid { grid-template-columns: 1fr; gap: 14px; }
+  .integration-card { padding: 18px; }
+  .integration-card.is-open .integration-form { max-height: 440px; }
+  .integration-form__actions { flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .integration-card,
+  .integration-form,
+  .field-input,
+  .btn--primary { transition: none !important; }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    // Значение подставляется сервером и совпадает с sentinel в бэкенде.
+    var MASK = '{{ masked_placeholder }}';
+
+    document.querySelectorAll('.integration-card').forEach(function (card) {
+        var form = card.querySelector('[data-save-form]');
+        if (!form) return;
+
+        var input = form.querySelector('.field-input');
+        var keyView = card.querySelector('[data-key-view]');
+        var editBtn = card.querySelector('[data-edit-key]');
+        var cancelBtn = card.querySelector('[data-cancel]');
+        var hint = card.querySelector('[data-hint]');
+        var submitBtn = form.querySelector('.btn--primary');
+        var connected = card.getAttribute('data-connected') === 'true';
+
+        // Для ключей подставляем sentinel, для Google Sheets — полный ID,
+        // чтобы пользователь мог исправить несколько символов, а не вводить заново.
+        var fieldName = input ? input.name : 'api_key';
+        var editValue = input ? input.getAttribute('data-edit-value') : null;
+        if (editValue === null) editValue = MASK;
+        var fieldLabel = fieldName === 'spreadsheet_id' ? 'ID таблицы' : 'Ключ';
+
+        function openEditor() {
+            card.classList.add('is-open');
+            card.classList.add('is-editing');
+            if (keyView) keyView.hidden = true;
+            if (input) {
+                input.disabled = false;
+                input.value = editValue;
+                input.focus();
+                input.select();
+            }
+        }
+
+        function closeEditor() {
+            card.classList.remove('is-editing');
+            // Неактивные карточки оставляем с открытой формой.
+            if (connected) card.classList.remove('is-open');
+            if (keyView) keyView.hidden = false;
+            if (input) {
+                input.value = editValue;
+                if (connected) input.disabled = true;
+            }
+            if (hint) hint.classList.remove('is-error');
+        }
+
+        if (editBtn) editBtn.addEventListener('click', openEditor);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeEditor);
+
+        // Обычная HTML-форма работает и без JS (POST → 303 → /integrations).
+        // С JS — fetch + reload, чтобы статус и маска пришли с сервера.
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            var value = input ? input.value.trim() : '';
+            if (!value) {
+                if (hint) {
+                    hint.textContent = fieldLabel + ' не может быть пустым.';
+                    hint.classList.add('is-error');
+                }
+                return;
+            }
+
+            if (submitBtn) submitBtn.disabled = true;
+            if (hint) hint.classList.remove('is-error');
+
+            var body = new URLSearchParams();
+            body.set(fieldName, value);
+
+            fetch(form.action, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body.toString()
+            })
+                .then(function (response) {
+                    if (!response.ok) throw new Error('Не удалось сохранить ' + fieldLabel.toLowerCase());
+                    window.location.reload();
+                })
+                .catch(function (error) {
+                    if (hint) {
+                        hint.textContent = error.message || 'Ошибка сохранения.';
+                        hint.classList.add('is-error');
+                    }
+                    if (submitBtn) submitBtn.disabled = false;
+                });
+        });
+    });
+})();
+</script>
+{% endblock %}

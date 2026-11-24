@@ -1,0 +1,52 @@
+<div class="case-edit" data-edit-panel aria-hidden="true">
+    <span class="panel-label">Ручное редактирование карточки</span>
+
+    <form class="case-edit__form form" data-edit-form>
+        <label class="field">
+            <span class="field-label">Название задачи</span>
+            <input type="text" name="title" value="{{ case.title }}" maxlength="200" required>
+        </label>
+
+        <div class="case-edit__row">
+            <label class="field">
+                <span class="field-label">Официальный статус (CRM)</span>
+                <input type="text" name="crm_status" value="{{ case.crm_status or '' }}" maxlength="64">
+            </label>
+            <label class="field">
+                <span class="field-label">Ответственный</span>
+                <input type="text" name="assignee" value="{{ case.assignee or '' }}" maxlength="64">
+            </label>
+        </div>
+
+        <div class="case-edit__row">
+            <label class="field">
+                <span class="field-label">Статус кейса</span>
+                <select name="status">
+                    <option value="open" {% if case.status == 'open' %}selected{% endif %}>open</option>
+                    <option value="pending" {% if case.status == 'pending' %}selected{% endif %}>pending</option>
+                    <option value="resolved" {% if case.status == 'resolved' %}selected{% endif %}>resolved</option>
+                </select>
+            </label>
+            <label class="field">
+                <span class="field-label">Статус задачи</span>
+                <select name="task_status">
+                    <option value="open" {% if case.task_status == 'open' %}selected{% endif %}>open</option>
+                    <option value="in_progress" {% if case.task_status == 'in_progress' %}selected{% endif %}>in_progress</option>
+                    <option value="waiting" {% if case.task_status == 'waiting' %}selected{% endif %}>waiting</option>
+                    <option value="done" {% if case.task_status == 'done' %}selected{% endif %}>done</option>
+                </select>
+            </label>
+        </div>
+
+        <label class="field">
+            <span class="field-label">Решение</span>
+            <textarea name="resolution" rows="2" maxlength="2000">{{ case.resolution or '' }}</textarea>
+        </label>
+
+        <div class="case-edit__actions">
+            <button type="submit" class="btn btn--primary" data-edit-save>Сохранить</button>
+            <button type="button" class="btn btn--ghost" data-edit-cancel>Отмена</button>
+            <span class="action-feedback" data-edit-feedback role="status"></span>
+        </div>
+    </form>
+</div>

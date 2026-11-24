@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Аналитика — RusSupport AI{% endblock %}
+{% block page_title %}Аналитика{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <h1>Аналитика</h1>
+    <p class="page-sub">Показатели эффективности работы support-отдела</p>
+</div>
+
+<section class="kpi-grid" aria-label="Ключевые показатели">
+    <div class="kpi-card">
+        <span class="kpi-label">Всего кейсов</span>
+        <span class="kpi-value">{{ total_cases }}</span>
+        <span class="kpi-note">в базе данных</span>
+    </div>
+    <div class="kpi-card kpi-card--accent">
+        <span class="kpi-label">Проблемных кейсов</span>
+        <span class="kpi-value">{{ problematic_cases }}</span>
+        <span class="kpi-note">critical + high + medium</span>
+    </div>
+    <div class="kpi-card">
+        <span class="kpi-label">Сообщений в чатах</span>
+        <span class="kpi-value">{{ total_messages }}</span>
+        <span class="kpi-note">все сообщения</span>
+    </div>
+    <div class="kpi-card">
+        <span class="kpi-label">Найдено расхождений</span>
+        <span class="kpi-value">{{ total_divergences }}</span>
+        <span class="kpi-note">CRM против переписки</span>
+    </div>
+</section>
+
+<section class="section" aria-label="Распределение по категориям">
+    <div class="section-head">
+        <h2>Распределение по категориям</h2>
+    </div>
+
+    <div class="distribution">
+        {% for category in categories %}
+        <div class="distribution-row">
+            <div class="distribution-meta">
+                <span class="distribution-name">{{ category.label }}</span>
+                <span class="distribution-count">{{ category.count }} кейсов · {{ category.percent }}%</span>
+            </div>
+            <div
+                class="progress-bar"
+                role="progressbar"
+                aria-valuenow="{{ category.percent }}"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-label="{{ category.label }}"
+            >
+                <div class="progress-fill" style="width: {{ category.percent }}%"></div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="section" aria-label="Последние события">
+    <div class="section-head">
+        <h2>Последние события</h2>
+    </div>
+
+    {% if recent_events %}
+    <ol class="event-list">
+        {% for event in recent_events %}
+        <li class="event-item">
+            <span class="event-avatar">{{ event.author[:1] }}</span>
+            <div class="event-body">
+                <div class="event-head">
+                    <span class="event-author">{{ event.author }}</span>
+                    <span class="event-source event-source--{{ event.source }}">[{{ event.source }}]</span>
+                    <span class="event-case">{{ event.case_code }}</span>
+                    <span class="event-time">{{ event.created_at }}</span>
+                </div>
+                <p class="event-text">{{ event.text }}</p>
+            </div>
+        </li>
+        {% endfor %}
+    </ol>
+    {% else %}
+    <p class="empty-state">Сообщений пока нет.</p>
+    {% endif %}
+</section>
+{% endblock %}

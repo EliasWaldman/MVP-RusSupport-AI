@@ -1,0 +1,538 @@
+{% extends "base.html" %}
+{% block title %}RusSupport AI — Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <h1>Today</h1>
+    <p class="page-sub">Понедельник · 17 ноя · {{ summary.problematic_cases }} действия ждут</p>
+</div>
+
+<section class="kpi-grid" aria-label="Ключевые показатели">
+    <div class="kpi-card">
+        <span class="kpi-label">Всего кейсов</span>
+        <span class="kpi-value">{{ summary.total_cases }}</span>
+        <span class="kpi-note">по всем источникам</span>
+    </div>
+    <div class="kpi-card kpi-card--accent">
+        <span class="kpi-label">Проблемных</span>
+        <span class="kpi-value">{{ summary.problematic_cases }}</span>
+        <span class="kpi-note">требуют действий</span>
+    </div>
+    <div class="kpi-card">
+        <span class="kpi-label">Решенных</span>
+        <span class="kpi-value">{{ summary.resolved_cases }}</span>
+        <span class="kpi-note">закрыто за период</span>
+    </div>
+    <div class="kpi-card">
+        <span class="kpi-label">Инцидентов</span>
+        <span class="kpi-value">{{ summary.total_issues }}</span>
+        <span class="kpi-note">выявлено правилами</span>
+    </div>
+</section>
+
+<div id="cases-list" aria-live="polite">
+{% if search_query and not cases and not tasks %}
+<div class="search-empty" role="status">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+    </svg>
+    <p>По запросу «{{ search_query }}» ничего не найдено.</p>
+    <button type="button" class="btn btn--ghost" data-search-clear>Очистить поиск</button>
+</div>
+{% else %}
+<section class="section" id="cases" aria-label="Требует внимания">
+    <div class="section-head">
+        <h2>Требует внимания</h2>
+        <span class="count-chip">{{ summary.problematic_cases }} open</span>
+    </div>
+
+    <div class="action-list">
+        {% for case in cases %}
+        {% set extra = case_extras[case.code] %}
+        <div class="action-card" role="button" tabindex="0" aria-expanded="false"
+             data-code="{{ case.code }}">
+            <span class="action-code">{{ case.code }}</span>
+
+            <div class="action-main">
+                <span class="action-title">{{ case.title }}</span>
+                <span class="action-meta">
+                    <span class="tag">{{ case.category }}</span>
+                    {% for source in case.issues | map(attribute='source') | unique %}
+                    <span class="tag tag--src">[{{ source }}]</span>
+                    {% endfor %}
+                </span>
+            </div>
+
+            <span class="action-side">
+                <span class="chip chip--{{ case.priority }}">{{ case.priority }}</span>
+                <span class="chip chip--status{% if case.status == 'resolved' %} is-resolved{% endif %}">{{ case.status }}</span>
+                <button type="button" class="card-delete" data-delete
+                        aria-label="Удалить кейс {{ case.code }}"
+                        title="Удалить кейс {{ case.code }}">×</button>
+            </span>
+
+            <div class="case-details" aria-hidden="true">
+                <div class="case-details__grid">
+                    <!-- Состояние CRM -->
+                    <section class="detail-block" aria-label="Состояние CRM">
+                        <span class="panel-label">Состояние CRM</span>
+                        <dl class="kv">
+                            <div class="kv-row"><dt>Официальный статус</dt><dd>{{ case.crm_status or '—' }}</dd></div>
+                            <div class="kv-row"><dt>Статус кейса</dt><dd>{{ case.status }}</dd></div>
+                            <div class="kv-row"><dt>Статус задачи</dt><dd class="js-task-status">{{ case.task_status }}</dd></div>
+                            {% if case.category == 'delivery' %}
+                            <div class="kv-row"><dt>Статус доставки</dt><dd>{{ extra.delivery_status }}</dd></div>
+                            {% endif %}
+                            {% if extra.resolution %}
+                            <div class="kv-row"><dt>Решение</dt><dd>{{ extra.resolution }}</dd></div>
+                            {% endif %}
+                        </dl>
+                    </section>
+
+                    <!-- Сведения из чата -->
+                    <section class="detail-block" aria-label="Сведения из чата">
+                        <span class="panel-label">Сведения из чата</span>
+                        {% if extra.last_message %}
+                        <p class="chat-line">
+                            <strong>{{ extra.last_message.author or extra.last_message.role }}</strong>
+                            <span class="tag">{{ extra.last_message.role }}</span>
+                            <time>{{ extra.last_message.created_at.strftime('%d.%m %H:%M') if extra.last_message.created_at else '—' }}</time>
+                        </p>
+                        <p class="chat-text">{{ extra.last_message.text }}</p>
+                        {% else %}
+                        <p class="empty">Сообщений пока нет.</p>
+                        {% endif %}
+                    </section>
+
+                    <!-- Расхождение -->
+                    <section class="detail-block" aria-label="Расхождение">
+                        <span class="panel-label">Расхождение</span>
+                        {% if case.issues %}
+                        <ul class="issue-list">
+                            {% for issue in case.issues %}
+                            <li class="issue-row">
+                                <span class="issue-top">
+                                    <span class="chip chip--{{ issue.severity }}">{{ issue.severity }}</span>
+                                    <strong>{{ issue.title }}</strong>
+                                    <span class="tag tag--src">[{{ issue.source }}]</span>
+                                </span>
+                                <span class="issue-code">{{ issue.code }}</span>
+                                <p class="issue-basis">{{ issue.basis }}</p>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="empty">Расхождений не выявлено — данные CRM и чатов согласованы.</p>
+                        {% endif %}
+                    </section>
+                </div>
+
+                <div class="case-actions">
+                    <button type="button" class="btn btn--ghost" data-edit>Редактировать</button>
+                    {% if case.category == 'onboarding' %}
+                    <button type="button" class="btn btn--ghost" data-action="confirm_docs">
+                        Подтвердить документы
+                    </button>
+                    {% elif case.category == 'offboarding' %}
+                    <button type="button" class="btn btn--ghost" data-action="confirm_offboarding">
+                        Подтвердить увольнение
+                    </button>
+                    {% elif case.category == 'delivery' %}
+                    <label class="field field--inline">
+                        <span class="field-label">Время доставки</span>
+                        <input type="time" data-delivery-time value="13:30">
+                    </label>
+                    <button type="button" class="btn btn--ghost" data-action="update_delivery">
+                        Обновить
+                    </button>
+                    {% endif %}
+                    <button type="button" class="btn btn--ghost btn--danger" data-action="close">
+                        Закрыть кейс
+                    </button>
+                    <span class="action-feedback" role="status"></span>
+                </div>
+
+                {% include '_case_edit.html' %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="section" id="tasks" aria-label="Задачи">
+    <div class="section-head">
+        <h2>Задачи</h2>
+        <span class="count-chip">{{ tasks | length }} active</span>
+    </div>
+
+    <div class="action-list">
+        {% for case in tasks %}
+        <div class="action-card" role="button" tabindex="0" aria-expanded="false"
+             data-code="{{ case.code }}">
+            <span class="action-code">{{ case.code }}</span>
+
+            <div class="action-main">
+                <span class="action-title">{{ case.title }}</span>
+                <span class="action-meta">
+                    <span class="tag">{{ case.category }}</span>
+                    <span class="tag tag--src">задача: {{ case.task_status }}</span>
+                    {% if case.assignee %}<span class="tag tag--src">{{ case.assignee }}</span>{% endif %}
+                </span>
+            </div>
+
+            <span class="action-side">
+                <span class="chip chip--{{ case.priority }}">{{ case.priority }}</span>
+                <span class="chip chip--status{% if case.status == 'resolved' %} is-resolved{% endif %}">{{ case.status }}</span>
+                <button type="button" class="card-delete" data-delete
+                        aria-label="Удалить кейс {{ case.code }}"
+                        title="Удалить кейс {{ case.code }}">×</button>
+            </span>
+
+            <div class="case-details" aria-hidden="true">
+                <div class="case-details__grid">
+                    <section class="detail-block" aria-label="Задача">
+                        <span class="panel-label">Задача</span>
+                        <dl class="kv">
+                            <div class="kv-row"><dt>Код</dt><dd>{{ case.code }}</dd></div>
+                            <div class="kv-row"><dt>Статус задачи</dt><dd class="js-task-status">{{ case.task_status }}</dd></div>
+                            <div class="kv-row"><dt>Ответственный</dt><dd>{{ case.assignee or '—' }}</dd></div>
+                            <div class="kv-row"><dt>Официальный статус</dt><dd>{{ case.crm_status or '—' }}</dd></div>
+                            {% if case_extras[case.code].resolution %}
+                            <div class="kv-row"><dt>Решение</dt><dd>{{ case_extras[case.code].resolution }}</dd></div>
+                            {% endif %}
+                        </dl>
+                    </section>
+                </div>
+                <div class="case-actions">
+                    <button type="button" class="btn btn--ghost" data-edit>Редактировать</button>
+                    <button type="button" class="btn btn--ghost btn--danger" data-action="close">
+                        Закрыть кейс
+                    </button>
+                    <span class="action-feedback" role="status"></span>
+                </div>
+
+                {% include '_case_edit.html' %}
+            </div>
+        </div>
+        {% else %}
+        <p class="empty">Активных задач пока нет.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+</div>
+{% endblock %}
+
+{% block rail %}
+<aside class="rail" aria-label="Быстрые команды AI">
+    <section class="rail-card">
+        <span class="rail-label">Команды ассистента</span>
+        <p class="rail-hint">Нажмите команду — она подставится в поле ввода. Останется нажать Enter.</p>
+
+        <div class="rail-commands">
+            <button type="button" class="command-preset" data-ai-command="Создай задачу на оформление сотрудника Елена Аверина, HR manager">
+                <code>Создай задачу на оформление сотрудника Елена Аверина, HR manager</code><span aria-hidden="true">↵</span>
+            </button>
+            <button type="button" class="command-preset" data-ai-command="Подтверди документы S-17">
+                <code>Подтверди документы S-17</code><span aria-hidden="true">↵</span>
+            </button>
+            <button type="button" class="command-preset" data-ai-command="Закрой S-24">
+                <code>Закрой S-24</code><span aria-hidden="true">↵</span>
+            </button>
+            <button type="button" class="command-preset" data-ai-command="Доставка P-08 13:30">
+                <code>Доставка P-08 13:30</code><span aria-hidden="true">↵</span>
+            </button>
+            <button type="button" class="command-preset" data-ai-command="Задержится P-08">
+                <code>Задержится P-08</code><span aria-hidden="true">↵</span>
+            </button>
+            <button type="button" class="command-preset" data-ai-command="Уволить S-24">
+                <code>Уволить S-24</code><span aria-hidden="true">↵</span>
+            </button>
+            <button type="button" class="command-preset" data-ai-command="Оформить S-17">
+                <code>Оформить S-17</code><span aria-hidden="true">↵</span>
+            </button>
+        </div>
+    </section>
+</aside>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    // ---------- Живой поиск кейсов в хедере ----------
+    var searchInput = document.getElementById('search-input');
+    var searchClear = document.querySelector('[data-search-clear]');
+    var casesList = document.getElementById('cases-list');
+    var searchTimer;
+    var searchSeq = 0;
+
+    function syncSearchClear() {
+        if (!searchInput || !searchClear) return;
+        searchClear.hidden = !searchInput.value.trim();
+    }
+
+    async function applySearch() {
+        if (!searchInput || !casesList) return;
+
+        var query = searchInput.value.trim();
+        var seq = ++searchSeq;
+        var url = '/' + (query ? '?q=' + encodeURIComponent(query) : '');
+
+        try {
+            var response = await fetch(url, {
+                headers: { 'X-Requested-With': 'fetch' }
+            });
+            if (!response.ok) throw new Error('Не удалось выполнить поиск');
+
+            var html = await response.text();
+            var doc = new DOMParser().parseFromString(html, 'text/html');
+            var nextList = doc.getElementById('cases-list');
+            if (!nextList) throw new Error('Не найден список кейсов');
+
+            // Не даём устаревшему ответу перезаписать свежий результат.
+            if (seq !== searchSeq) return;
+            casesList.innerHTML = nextList.innerHTML;
+            syncSearchClear();
+        } catch (err) {
+            if (searchClear) searchClear.title = err.message || 'Ошибка поиска';
+        }
+    }
+
+    if (searchInput) {
+        syncSearchClear();
+        searchInput.addEventListener('input', function () {
+            syncSearchClear();
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(applySearch, 300);
+        });
+        searchInput.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter') {
+                ev.preventDefault();
+                clearTimeout(searchTimer);
+                applySearch();
+            } else if (ev.key === 'Escape') {
+                searchInput.value = '';
+                syncSearchClear();
+                clearTimeout(searchTimer);
+                applySearch();
+            }
+        });
+    }
+
+    document.addEventListener('click', function (ev) {
+        if (!ev.target.closest('[data-search-clear]')) return;
+        ev.preventDefault();
+        if (searchInput) {
+            searchInput.value = '';
+            syncSearchClear();
+            searchInput.focus();
+        }
+        clearTimeout(searchTimer);
+        applySearch();
+    });
+
+    // Точная высота раскрытого блока без жёстких max-height: 1400px.
+    function animateDetails(details, open) {
+        if (!details) return;
+        if (open) {
+            details.style.maxHeight = '0px';
+            requestAnimationFrame(function () {
+                details.style.maxHeight = details.scrollHeight + 'px';
+                requestAnimationFrame(function () {
+                    cardScrollIntoView(details);
+                });
+            });
+        } else {
+            details.style.maxHeight = details.scrollHeight + 'px';
+            requestAnimationFrame(function () {
+                details.style.maxHeight = '0px';
+            });
+        }
+    }
+
+    function cardScrollIntoView(details) {
+        var card = details.closest('.action-card');
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.addEventListener('click', async function (ev) {
+        var card = ev.target.closest('.action-card');
+        if (!card) return;
+
+        // Крестик удаления: сначала подтверждение, затем DELETE и перезагрузка.
+        var del = ev.target.closest('[data-delete]');
+        if (del) {
+            ev.preventDefault();
+            ev.stopPropagation();
+
+            var code = card.dataset.code;
+            if (!window.confirm('Удалить кейс ' + code + '? Это действие нельзя отменить.')) {
+                return;
+            }
+
+            del.disabled = true;
+            try {
+                var url = '/api/cases/' + encodeURIComponent(code);
+                var res = await fetch(url, { method: 'DELETE' });
+                if (!res.ok) {
+                    var errData = await res.json().catch(function () { return {}; });
+                    throw new Error(errData.detail || 'Ошибка удаления');
+                }
+                window.location.reload();
+            } catch (err) {
+                window.alert('Не удалось удалить кейс: ' + err.message);
+                del.disabled = false;
+            }
+            return;
+        }
+
+        // Ручное редактирование: показать/скрыть форму внутри карточки.
+        var editBtn = ev.target.closest('[data-edit]');
+        var editCancel = ev.target.closest('[data-edit-cancel]');
+        if (editBtn || editCancel) {
+            ev.preventDefault();
+            ev.stopPropagation();
+
+            var panel = card.querySelector('[data-edit-panel]');
+            var details = card.querySelector('.case-details');
+            if (panel) {
+                var show = !!editBtn;
+                panel.setAttribute('aria-hidden', show ? 'false' : 'true');
+                if (show) {
+                    var first = panel.querySelector('input, select, textarea');
+                    if (first) first.focus();
+                }
+                // У раскрытого блока inline max-height — обновляем его после показа формы.
+                if (details && card.classList.contains('is-open')) {
+                    details.style.maxHeight = details.scrollHeight + 'px';
+                }
+            }
+            return;
+        }
+
+        // Кнопка действия внутри раскрытого блока.
+        var btn = ev.target.closest('[data-action]');
+        if (btn) {
+            ev.preventDefault();
+            ev.stopPropagation();
+
+            var body = { action: btn.dataset.action };
+            if (btn.dataset.action === 'update_delivery') {
+                var input = card.querySelector('[data-delivery-time]');
+                body.delivery_time = input ? input.value : '';
+            }
+
+            var feedback = card.querySelector('.action-feedback');
+            btn.disabled = true;
+            try {
+                var url = '/api/cases/' + encodeURIComponent(card.dataset.code) + '/action';
+                var res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                var data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Ошибка запроса');
+                window.location.reload();
+            } catch (err) {
+                if (feedback) feedback.textContent = 'Ошибка: ' + err.message;
+                btn.disabled = false;
+            }
+            return;
+        }
+
+        // Клик по полям внутри деталей не должен закрывать блок.
+        if (ev.target.closest('.case-details')) return;
+
+        var details = card.querySelector('.case-details');
+        var isOpen = card.classList.toggle('is-open');
+        card.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        if (details) details.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+        animateDetails(details, isOpen);
+    });
+
+    // Сохранение ручного редактирования карточки.
+    document.addEventListener('submit', async function (ev) {
+        var form = ev.target.closest('[data-edit-form]');
+        if (!form) return;
+        ev.preventDefault();
+
+        var card = form.closest('.action-card');
+        var feedback = form.querySelector('[data-edit-feedback]');
+        var saveBtn = form.querySelector('[data-edit-save]');
+
+        function value(name) {
+            var el = form.elements.namedItem(name);
+            return el ? String(el.value || '').trim() : '';
+        }
+
+        var payload = {
+            title: value('title'),
+            crm_status: value('crm_status') || null,
+            assignee: value('assignee') || null,
+            status: value('status'),
+            task_status: value('task_status'),
+            resolution: value('resolution') || null
+        };
+
+        if (saveBtn) saveBtn.disabled = true;
+        if (feedback) feedback.textContent = '';
+        try {
+            var url = '/api/cases/' + encodeURIComponent(card.dataset.code);
+            var res = await fetch(url, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            var data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Ошибка сохранения');
+            window.location.reload();
+        } catch (err) {
+            if (feedback) feedback.textContent = 'Ошибка: ' + err.message;
+            if (saveBtn) saveBtn.disabled = false;
+        }
+    });
+
+    // Если окно изменило размер — пересчитаем высоту уже открытых блоков.
+    window.addEventListener('resize', function () {
+        document.querySelectorAll('.action-card.is-open .case-details').forEach(function (details) {
+            details.style.maxHeight = details.scrollHeight + 'px';
+        });
+    });
+
+    document.addEventListener('keydown', function (ev) {
+        var card = ev.target;
+        if ((ev.key === 'Enter' || ev.key === ' ') &&
+            card.classList && card.classList.contains('action-card')) {
+            ev.preventDefault();
+            card.click();
+        }
+    });
+
+    // Быстрые команды: подставляем текст в глобальный AI Command Bar.
+    document.addEventListener('click', function (ev) {
+        var preset = ev.target.closest('[data-ai-command]');
+        if (!preset) return;
+
+        var input = document.getElementById('ai-command');
+        if (!input) return;
+
+        input.value = preset.getAttribute('data-ai-command');
+        // Сообщаем глобальному скрипту Command Bar, что ввод обновлён:
+        // старый ответ AI должен исчезнуть до отправки новой команды.
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+
+        document.querySelectorAll('.command-preset.is-selected').forEach(function (item) {
+            item.classList.remove('is-selected');
+        });
+        preset.classList.add('is-selected');
+    });
+
+})();
+</script>
+{% endblock %}

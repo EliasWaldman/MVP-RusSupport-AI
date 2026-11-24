@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Документация — RusSupport AI{% endblock %}
+{% block page_title %}Документация{% endblock %}
+
+{% block content %}
+<div class="page-head">
+    <h1>Документация RusSupport AI</h1>
+    <p class="page-sub">Что это, как пользоваться и где искать служебные ссылки.</p>
+</div>
+
+<div class="docs-container">
+    <section class="docs-section">
+        <span class="docs-kicker">Product overview</span>
+        <h2>О продукте</h2>
+        <p>
+            RusSupport AI — AI-помощник для Support-отдела. Он собирает обращения
+            в единые кейсы, подсказывает приоритет и берёт на себя рутинные
+            процессы: оформление новых сотрудников, увольнения и доставку карт.
+        </p>
+        <p>
+            Вместо рассылки по чатам специалист видит одну очередь задач, историю
+            сообщений и понятные действия по каждому кейсу. Ответы AI и команды
+            управления работают в том же интерфейсе — без переключения между
+            системами.
+        </p>
+        <div class="docs-grid">
+            <div class="docs-step">
+                <h3>Одна очередь</h3>
+                <p>Все обращения, статусы и ответственные в одном дашборде.</p>
+            </div>
+            <div class="docs-step">
+                <h3>Меньше рутины</h3>
+                <p>Типовые действия выполняются командой или кнопкой за пару кликов.</p>
+            </div>
+            <div class="docs-step">
+                <h3>Прозрачность</h3>
+                <p>Ключевые показатели и критические кейсы видны сразу на главной.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="docs-section">
+        <span class="docs-kicker">How to use</span>
+        <h2>Как пользоваться</h2>
+        <div class="docs-grid">
+            <div class="docs-step">
+                <h3>1. Веб-дашборд</h3>
+                <p>
+                    На главной — KPI, блок «Требует внимания» и список задач.
+                    Карточка раскрывается прямо на странице: внутри видны
+                    проблема, ответственный, CRM-статус и история сообщений.
+                    Кнопки действий подтверждают документы, закрывают кейс
+                    или обновляют доставку.
+                </p>
+            </div>
+            <div class="docs-step">
+                <h3>2. AI Command Bar</h3>
+                <p>
+                    Поле внизу экрана принимает команды естественным языком.
+                    Напишите <span class="docs-code">Закрой S-24</span> или
+                    <span class="docs-code">Создай задачу на оформление сотрудника Елена Аверина, HR manager</span>
+                    — AI выберет действие и покажет результат.
+                </p>
+            </div>
+            <div class="docs-step">
+                <h3>3. Telegram-бот</h3>
+                <p>
+                    Бот дублирует ключевые сценарии в чате: сводка, выборки по
+                    процессам, карточка кейса и inline-кнопки для создания,
+                    редактирования, выполнения и удаления задач.
+                </p>
+            </div>
+        </div>
+
+        <p class="docs-note">
+            Примеры команд: <span class="docs-code">Закрой S-24</span>,
+            <span class="docs-code">Подтверди документы S-17</span>,
+            <span class="docs-code">Обнови доставку P-08</span>. После мутирующего
+            действия страница обновляется сама.
+        </p>
+    </section>
+
+    <section class="docs-section">
+        <span class="docs-kicker">Telegram</span>
+        <h2>Команды бота</h2>
+        <p>
+            Откройте <a class="docs-link docs-link--inline" href="https://t.me/RusSupport_AI_bot" target="_blank" rel="noopener noreferrer">@RusSupport_AI_bot</a>
+            и отправьте <span class="docs-code">/start</span>. Доступны:
+        </p>
+        <ul>
+            <li><span class="docs-code">/summary</span> — KPI, процессы, CRM-чат и критические причины;</li>
+            <li><span class="docs-code">/onboarding</span>, <span class="docs-code">/offboarding</span>, <span class="docs-code">/delivery</span> — кейсы по процессам;</li>
+            <li><span class="docs-code">/critical</span> — только проблемные кейсы;</li>
+            <li><span class="docs-code">/case S-24</span> — карточка конкретного кейса;</li>
+            <li>inline-меню: «Сводка», «Создать задачу», «Управление кейсами».</li>
+        </ul>
+    </section>
+
+    <section class="docs-section">
+        <span class="docs-kicker">Integrations</span>
+        <h2>Интеграции и данные</h2>
+        <p>
+            Все кейсы автоматически выгружаются в общую
+            <a class="docs-link docs-link--inline" href="https://docs.google.com/spreadsheets/d/1JdC0W1RP3b0clVAmSH_sQHh5bpdhPIMgZBqFbi0ObTQ/edit" target="_blank" rel="noopener noreferrer">Google-таблицу RusSupport AI</a>.
+            Выгрузка срабатывает после создания, изменения, удаления кейса,
+            выполнения действия и успешной AI-команды; ручной экспорт доступен
+            через <span class="docs-code">POST /api/export/sheets</span>.
+        </p>
+        <p>
+            ID таблицы редактируется на странице «Интеграции» в карточке
+            Google Sheets. Файл доступа <span class="docs-code">data/google_credentials.json</span>
+            хранится на сервере и в интерфейс не попадает.
+        </p>
+    </section>
+
+    <section class="docs-section">
+        <span class="docs-kicker">Useful links</span>
+        <h2>Полезные ссылки</h2>
+        <div class="docs-links">
+            <a class="docs-link docs-link--primary" href="https://t.me/RusSupport_AI_bot" target="_blank" rel="noopener noreferrer">
+                Telegram-бот
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+            </a>
+            <a class="docs-link" href="https://docs.google.com/spreadsheets/d/1JdC0W1RP3b0clVAmSH_sQHh5bpdhPIMgZBqFbi0ObTQ/edit" target="_blank" rel="noopener noreferrer">
+                Google-таблица
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+            </a>
+            <a class="docs-link" href="/api/docs" target="_blank" rel="noopener noreferrer">
+                Swagger API
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+            </a>
+            <a class="docs-link" href="/openapi.json" target="_blank" rel="noopener noreferrer">
+                OpenAPI JSON
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>
+            </a>
+        </div>
+        <p class="docs-note">
+            Спецификация API доступна по <span class="docs-code">/openapi.json</span>,
+            интерактивная документация — по <span class="docs-code">/api/docs</span>.
+            Адрес <span class="docs-code">/docs</span> теперь открывает эту страницу.
+        </p>
+    </section>
+
+    <section class="docs-section">
+        <span class="docs-kicker">For engineers</span>
+        <h2>Технические детали</h2>
+        <ul>
+            <li><strong>Backend:</strong> FastAPI, Jinja2, SQLite через aiosqlite, Pydantic Settings.</li>
+            <li><strong>AI:</strong> GigaChat (<span class="docs-code">GigaChat</span>, v1) как основной провайдер, regex-fallback и OpenRouter как резерв.</li>
+            <li><strong>Бот:</strong> aiogram 3, inline-клавиатуры и FSM для CRUD-сценариев.</li>
+            <li><strong>Интеграции:</strong> gspread + google-auth, фоновые выгрузки через FastAPI BackgroundTasks.</li>
+            <li><strong>Структура:</strong> роуты в <span class="docs-code">app/api</span> и <span class="docs-code">app/dashboard</span>, бизнес-логика в <span class="docs-code">app/services</span>.</li>
+            <li><strong>Секреты:</strong> только в <span class="docs-code">.env</span> и защищённых файлах, в репозиторий не попадают.</li>
+        </ul>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,81 @@
+{
+  "cases": [
+    {
+      "code": "S-17",
+      "title": "Оформление сотрудника",
+      "category": "onboarding",
+      "status": "open",
+      "crm_status": "pending",
+      "first_day_tomorrow": true,
+      "documents_expected": true,
+      "documents_sent_by_employee": true,
+      "documents_confirmed": false,
+      "messages": [
+        {
+          "role": "employee",
+          "author": "Иван Иванов",
+          "text": "Вчера отправил фотографии документов руководителю в личные сообщения.",
+          "created_at": "2026-01-02T12:00:00"
+        }
+      ]
+    },
+    {
+      "code": "S-24",
+      "title": "Увольнение",
+      "category": "offboarding",
+      "status": "open",
+      "crm_status": "pending",
+      "last_work_day_today": true,
+      "official_confirmation_provided": false,
+      "employee_claimed_discussed": true,
+      "messages": [
+        {
+          "role": "employee",
+          "author": "Ольга Петрова",
+          "text": "Все обсудил с руководителем.",
+          "created_at": "2026-01-02T09:00:00"
+        }
+      ]
+    },
+    {
+      "code": "P-08",
+      "title": "Поставка карт",
+      "category": "delivery",
+      "status": "open",
+      "crm_status": "pending",
+      "delivery_status": "in_transit",
+      "delivery_deadline": "2026-01-03",
+      "delivery_eta": "2026-01-03",
+      "delivery_delay_reported": true,
+      "delivery_confirmed": false,
+      "messages": [
+        {
+          "role": "courier",
+          "author": "Курьер",
+          "text": "Задержка, прибытие ожидается не раньше 13:00.",
+          "created_at": "2026-01-03T10:00:00"
+        }
+      ]
+    },
+    {
+      "code": "P-09",
+      "title": "Поставка карт",
+      "category": "delivery",
+      "status": "resolved",
+      "crm_status": "resolved",
+      "delivery_status": "accepted",
+      "delivery_deadline": "2026-01-03",
+      "delivery_eta": "2026-01-03",
+      "delivery_delay_reported": false,
+      "delivery_confirmed": true,
+      "messages": [
+        {
+          "role": "recipient",
+          "author": "Получатель",
+          "text": "Получение и проверку количества подтверждены.",
+          "created_at": "2026-01-03T09:25:00"
+        }
+      ]
+    }
+  ]
+}

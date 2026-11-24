@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}{{ case.code }} · {{ case.title }} — RusSupport AI{% endblock %}
+
+{% macro yesno(v) %}{{ 'Да' if v else 'Нет' }}{% endmacro %}
+
+{% block content %}
+<div class="detail">
+    <a class="btn btn--back" href="/">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>
+        Назад к дашборду
+    </a>
+
+    <header class="panel detail-head">
+        <div class="detail-head-main">
+            <span class="crumbs crumbs--page">Support / Cases / {{ case.code }}</span>
+            <h1>{{ case.code }} · {{ case.title }}</h1>
+            <span class="detail-chips">
+                <span class="chip chip--{{ case.priority }}">{{ case.priority }}</span>
+                <span class="chip chip--status{% if case.status == 'resolved' %} is-resolved{% endif %}">{{ case.status }}</span>
+                <span class="chip chip--task" id="task-status-chip">{{ case.task_status }}</span>
+                <span class="chip chip--muted">CRM: {{ case.crm_status or '—' }}</span>
+            </span>
+        </div>
+        <span class="detail-head-meta">
+            Создан: {{ case.created_at.strftime('%d.%m.%Y %H:%M') if case.created_at else '—' }}
+            · Обновлён: <span id="updated-at">{{ case.updated_at.strftime('%d.%m.%Y %H:%M') if case.updated_at else '—' }}</span>
+        </span>
+    </header>
+
+    <div class="detail-grid">
+        <div class="detail-main">
+            {# ---------- Официальные данные CRM ---------- #}
+            <section class="panel" aria-label="Состояние операции (CRM)">
+                <span class="panel-label">Состояние операции · CRM</span>
+                <p class="panel-note">Официальный источник статусов. AI не меняет данные CRM самостоятельно.</p>
+                <dl class="kv">
+                    <div class="kv-row"><dt>Официальный статус</dt><dd>{{ case.crm_status or '—' }}</dd></div>
+                    <div class="kv-row"><dt>Статус кейса</dt><dd>{{ case.status }}</dd></div>
+                    <div class="kv-row"><dt>Категория</dt><dd>{{ case.category }}</dd></div>
+
+                    {% if signals.category == 'onboarding' %}
+                    <div class="kv-row"><dt>Первый рабочий день завтра</dt><dd>{{ yesno(signals.first_day_tomorrow) }}</dd></div>
+                    <div class="kv-row"><dt>Документы ожидаются</dt><dd>{{ yesno(signals.documents_expected) }}</dd></div>
+                    <div class="kv-row"><dt>Документы отправлены сотрудником</dt><dd>{{ yesno(signals.documents_sent_by_employee) }}</dd></div>
+                    <div class="kv-row"><dt>Документы подтверждены в CRM</dt><dd>{{ yesno(signals.documents_confirmed) }}</dd></div>
+                    {% endif %}
+
+                    {% if signals.category == 'offboarding' %}
+                    <div class="kv-row"><dt>Последний рабочий день сегодня</dt><dd>{{ yesno(signals.last_work_day_today) }}</dd></div>
+                    <div class="kv-row"><dt>Официальное подтверждение руководителя</dt><dd>{{ yesno(signals.official_confirmation_provided) }}</dd></div>
+                    <div class="kv-row"><dt>Сотрудник утверждает: обсуждено</dt><dd>{{ yesno(signals.employee_claimed_discussed) }}</dd></div>
+                    {% endif %}
+
+                    {% if signals.category == 'delivery' %}
+                    <div class="kv-row"><dt>Статус доставки</dt><dd>{{ signals.delivery_status or '—' }}</dd></div>
+                    <div class="kv-row"><dt>Дедлайн</dt><dd>{{ signals.delivery_deadline.isoformat() if signals.delivery_deadline else '—' }}</dd></div>
+                    <div class="kv-row"><dt>Ожидаемое прибытие (ETA)</dt><dd>{{ signals.delivery_eta.isoformat() if signals.delivery_eta else '—' }}</dd></div>
+                    <div class="kv-row"><dt>Задержка сообщена в чате</dt><dd>{{ yesno(signals.delivery_delay_reported) }}</dd></div>
+                    <div class="kv-row"><dt>Приёмка подтверждена</dt><dd>{{ yesno(signals.delivery_confirmed) }}</dd></div>
+                    {% endif %}
+                </dl>
+            </section>
+
+            {# ---------- Переписка ---------- #}
+            <section class="panel" aria-label="Переписка">
+                <span class="panel-label">Переписка · {{ messages|length }}</span>
+                {% if messages %}
+                <ul class="msg-list">
+                    {% for msg in messages %}
+                    <li class="msg-row">
+                        <span class="avatar avatar--sm">{{ msg.author[:2] | upper }}</span>
+                        <span class="msg-body">
+                            <span class="msg-meta">
+                                <strong>{{ msg.author }}</strong>
+                                <span class="tag">{{ msg.role }}</span>
+                                <time>{{ msg.created_at.strftime('%d.%m %H:%M') if msg.created_at else '—' }}</time>
+                            </span>
+                            <p class="msg-text">{{ msg.text }}</p>
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="empty">Сообщений пока нет.</p>
+                {% endif %}
+            </section>
+
+            {# ---------- Расхождения ---------- #}
+            <section class="panel" aria-label="Обнаруженное расхождение">
+                <span class="panel-label">Обнаруженное расхождение</span>
+                {% if case.issues %}
+                <ul class="issue-list">
+                    {% for issue in case.issues %}
+                    <li class="issue-row">
+                        <span class="issue-top">
+                            <span class="chip chip--{{ issue.severity }}">{{ issue.severity }}</span>
+                            <strong>{{ issue.title }}</strong>
+                            <span class="tag tag--src">[{{ issue.source }}]</span>
+                        </span>
+                        <span class="issue-code">{{ issue.code }}</span>
+                        <p class="issue-basis">{{ issue.basis }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="empty">Расхождений не выявлено — данные CRM и чатов согласованы.</p>
+                {% endif %}
+            </section>
+
+            {# ---------- AI-рекомендация ---------- #}
+            <section class="panel panel--ai" aria-label="Рекомендация AI">
+                <span class="panel-label">Рекомендация · AI</span>
+                <p class="ai-text">{{ recommendation }}</p>
+                <span class="ai-note">
+                    {% if ai_live %}
+                    Источник: LLM-провайдер (OpenRouter).
+                    {% else %}
+                    MockProvider: детерминированный вывод. Настройте OPENROUTER_API_KEY для включения LLM.
+                    {% endif %}
+                </span>
+            </section>
+        </div>
+
+        <aside class="detail-side">
+            {# ---------- Рабочие поля ---------- #}
+            <section class="panel" aria-label="Рабочие поля">
+                <span class="panel-label">Рабочие поля</span>
+                <form id="work-form" class="form" data-code="{{ case.code }}">
+                    <label class="field">
+                        <span class="field-label">Статус задачи</span>
+                        <select name="task_status">
+                            {% for value, label in task_statuses %}
+                            <option value="{{ value }}"{% if value == case.task_status %} selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span class="field-label">Ответственный</span>
+                        <input name="assignee" type="text" maxlength="64" placeholder="Например: Иванова А." value="{{ case.assignee or '' }}">
+                    </label>
+                    <label class="field">
+                        <span class="field-label">Итог / решение</span>
+                        <textarea name="resolution" rows="4" maxlength="2000" placeholder="Комментарий специалиста: что сделано, что подтверждено">{{ case.resolution or '' }}</textarea>
+                    </label>
+                    <button class="btn btn--primary btn--block" type="submit">Сохранить</button>
+                    <span class="form-msg" id="work-msg" role="status"></span>
+                </form>
+            </section>
+
+            {# ---------- Новый комментарий ---------- #}
+            <section class="panel" aria-label="Новый комментарий">
+                <span class="panel-label">Новый комментарий</span>
+                <form id="msg-form" class="form" data-code="{{ case.code }}">
+                    <label class="field">
+                        <span class="field-label">Автор</span>
+                        <input name="author" type="text" maxlength="255" value="Admin">
+                    </label>
+                    <label class="field">
+                        <span class="field-label">Роль</span>
+                        <select name="role">
+                            <option value="support" selected>support</option>
+                            <option value="employee">employee</option>
+                            <option value="manager">manager</option>
+                            <option value="courier">courier</option>
+                            <option value="recipient">recipient</option>
+                            <option value="system">system</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span class="field-label">Текст</span>
+                        <textarea name="text" rows="3" maxlength="4000" required placeholder="Комментарий к кейсу..."></textarea>
+                    </label>
+                    <button class="btn btn--block" type="submit">Отправить</button>
+                    <span class="form-msg" id="msg-msg" role="status"></span>
+                </form>
+            </section>
+        </aside>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    function show(el, text, ok) {
+        el.textContent = text;
+        el.classList.toggle('is-ok', !!ok);
+    }
+
+    var workForm = document.getElementById('work-form');
+    if (workForm) {
+        workForm.addEventListener('submit', async function (ev) {
+            ev.preventDefault();
+            var msg = document.getElementById('work-msg');
+            try {
+                var res = await fetch('/api/cases/' + encodeURIComponent(workForm.dataset.code), {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        task_status: workForm.task_status.value,
+                        assignee: workForm.assignee.value || null,
+                        resolution: workForm.resolution.value || null
+                    })
+                });
+                var data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Ошибка запроса');
+                show(msg, 'Сохранено: ' + data.code + ' → ' + data.task_status +
+                    (data.assignee ? ' · ' + data.assignee : ''), true);
+                var chip = document.getElementById('task-status-chip');
+                if (chip) chip.textContent = data.task_status;
+                var upd = document.getElementById('updated-at');
+                if (upd && data.updated_at) {
+                    upd.textContent = new Date(data.updated_at).toLocaleString('ru-RU');
+                }
+            } catch (err) {
+                show(msg, 'Ошибка: ' + err.message, false);
+            }
+        });
+    }
+
+    var msgForm = document.getElementById('msg-form');
+    if (msgForm) {
+        msgForm.addEventListener('submit', async function (ev) {
+            ev.preventDefault();
+            var note = document.getElementById('msg-msg');
+            try {
+                var res = await fetch('/api/cases/' + encodeURIComponent(msgForm.dataset.code) + '/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        role: msgForm.role.value,
+                        author: msgForm.author.value,
+                        text: msgForm.text.value
+                    })
+                });
+                var data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Ошибка запроса');
+                window.location.reload();
+            } catch (err) {
+                show(note, 'Ошибка: ' + err.message, false);
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}
